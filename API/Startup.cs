@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using API.Data;
 using API.Extensions;
 using API.Interfaces;
+using API.Middleware;
 using API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -40,12 +41,14 @@ namespace API
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public async void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+            // if (env.IsDevelopment())
+            // {
+            //     app.UseDeveloperExceptionPage();
+            // }
+
+            app.UseMiddleware<ExceptionMiddleware>();
 
             app.UseHttpsRedirection();
 
@@ -61,6 +64,25 @@ namespace API
             {
                 endpoints.MapControllers();
             });
+
+            var builder = WebApplication.CreateBuilder();
+            builder.Services.AddControllers();
+            builder.Services.AddApplicationServices(builder.Configuration);
+            builder.Services.AddIdentityServices(builder.Configuration);
+            var app1 = builder.Build();
+            using var scope = app1.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            try
+            {
+                var context = services.GetRequiredService<DataContext>();
+                await context.Database.MigrateAsync();
+                await Seed.SeedUsers(context);
+            }
+            catch (Exception ex)
+            {
+                var logger = services.GetService<ILogger<Program>>();
+                logger.LogError(ex, "An error occurred during migration");
+            }
         }
     }
 }
