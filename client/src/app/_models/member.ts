@@ -10,8 +10,8 @@ export interface Member {
     lastActive: Date;
     gender: string;
     introduction: string;
-    lokingFor: any;
-    interest: any;
+    lookingFor: any;
+    interests: any;
     city: string;
     country: string;
     photos: Photo[];
